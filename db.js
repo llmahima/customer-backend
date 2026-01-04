@@ -1,0 +1,37 @@
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
+
+// Database path
+const dbPath = path.join(__dirname, '..', 'database', 'customer.db');
+
+// Initialize database connection
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database:', err.message);
+  } else {
+    console.log('Connected to SQLite database');
+    // Create tables if they don't exist
+    db.run(`CREATE TABLE IF NOT EXISTS customers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_name TEXT NOT NULL,
+      last_name TEXT NOT NULL,
+      phone_number TEXT NOT NULL,
+      city TEXT NOT NULL,
+      state TEXT NOT NULL,
+      pin_code TEXT NOT NULL
+    )`);
+
+    db.run(`CREATE TABLE IF NOT EXISTS addresses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      customer_id INTEGER NOT NULL,
+      address_line TEXT NOT NULL,
+      city TEXT NOT NULL,
+      state TEXT NOT NULL,
+      pin_code TEXT NOT NULL,
+      FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+    )`);
+  }
+});
+
+module.exports = db;
+
