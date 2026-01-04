@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 // Database path
-const dbDir = path.join(__dirname, 'database');
+const dbDir = path.join(__dirname, '..', 'database');
 const dbPath = path.join(dbDir, 'customer.db');
 
 // Ensure database directory exists
