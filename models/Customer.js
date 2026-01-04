@@ -1,27 +1,28 @@
 const db = require('../config/db');
 
-// Get total count of customers with filters
+// Get total count of customers with filters (searching in addresses table)
 const getCustomerCount = (filters = {}) => {
   return new Promise((resolve, reject) => {
     const { city, state, pin_code } = filters;
-    let query = 'SELECT COUNT(*) as count FROM customers';
+    let query = 'SELECT COUNT(DISTINCT c.id) as count FROM customers c';
     const params = [];
 
     if (city || state || pin_code) {
+      query += ' INNER JOIN addresses a ON c.id = a.customer_id WHERE ';
       const conditions = [];
       if (city) {
-        conditions.push('city LIKE ?');
+        conditions.push('a.city LIKE ?');
         params.push(`%${city}%`);
       }
       if (state) {
-        conditions.push('state LIKE ?');
+        conditions.push('a.state LIKE ?');
         params.push(`%${state}%`);
       }
       if (pin_code) {
-        conditions.push('pin_code LIKE ?');
+        conditions.push('a.pin_code LIKE ?');
         params.push(`%${pin_code}%`);
       }
-      query += ' WHERE ' + conditions.join(' AND ');
+      query += conditions.join(' AND ');
     }
 
     db.get(query, params, (err, row) => {
@@ -31,34 +32,52 @@ const getCustomerCount = (filters = {}) => {
   });
 };
 
-// Get all customers with optional filters and pagination
+// Get all customers with optional filters and pagination (searching in addresses table)
+// Includes first address information for display
 const getAllCustomers = (filters = {}, pagination = {}) => {
   return new Promise((resolve, reject) => {
     const { city, state, pin_code } = filters;
     const { page = 1, limit = 10 } = pagination;
     const offset = (page - 1) * limit;
     
-    let query = 'SELECT * FROM customers';
+    // Build the query: Filter customers by addresses, then get their first address for display
+    let query = `
+      SELECT DISTINCT 
+        c.id,
+        c.first_name,
+        c.last_name,
+        c.phone_number,
+        a.city,
+        a.state,
+        a.pin_code,
+        a.address_line
+      FROM customers c
+      LEFT JOIN addresses a ON c.id = a.customer_id AND a.id = (
+        SELECT MIN(id) FROM addresses WHERE customer_id = c.id
+      )
+    `;
     const params = [];
 
+    // Apply filters: Join with addresses table to filter customers
     if (city || state || pin_code) {
+      query += ' INNER JOIN addresses af ON c.id = af.customer_id WHERE ';
       const conditions = [];
       if (city) {
-        conditions.push('city LIKE ?');
+        conditions.push('af.city LIKE ?');
         params.push(`%${city}%`);
       }
       if (state) {
-        conditions.push('state LIKE ?');
+        conditions.push('af.state LIKE ?');
         params.push(`%${state}%`);
       }
       if (pin_code) {
-        conditions.push('pin_code LIKE ?');
+        conditions.push('af.pin_code LIKE ?');
         params.push(`%${pin_code}%`);
       }
-      query += ' WHERE ' + conditions.join(' AND ');
+      query += conditions.join(' AND ');
     }
 
-    query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+    query += ' ORDER BY c.id DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
 
     db.all(query, params, (err, rows) => {
@@ -78,17 +97,17 @@ const getCustomerById = (id) => {
   });
 };
 
-// Create new customer
+// Create new customer (only personal info, addresses are stored separately)
 const createCustomer = (customerData) => {
   return new Promise((resolve, reject) => {
-    const { first_name, last_name, phone_number, city, state, pin_code } = customerData;
+    const { first_name, last_name, phone_number } = customerData;
     
     db.run(
-      'INSERT INTO customers (first_name, last_name, phone_number, city, state, pin_code) VALUES (?, ?, ?, ?, ?, ?)',
-      [first_name, last_name, phone_number, city, state, pin_code],
+      'INSERT INTO customers (first_name, last_name, phone_number) VALUES (?, ?, ?)',
+      [first_name, last_name, phone_number],
       function(err) {
         if (err) reject(err);
-        else resolve({ id: this.lastID, ...customerData });
+        else resolve({ id: this.lastID, first_name, last_name, phone_number });
       }
     );
   });

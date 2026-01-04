@@ -57,25 +57,32 @@ const getCustomerById = async (req, res) => {
 // Create new customer
 const createCustomer = async (req, res) => {
   try {
-    const { first_name, last_name, phone_number, city, state, pin_code } = req.body;
+    const { first_name, last_name, phone_number, address_line, city, state, pin_code } = req.body;
 
-    // Validation
-    if (!first_name || !last_name || !phone_number || !city || !state || !pin_code) {
-      return res.status(400).json({ error: 'All fields are required' });
+    // Validation for customer fields
+    if (!first_name || !last_name || !phone_number) {
+      return res.status(400).json({ error: 'First name, last name, and phone number are required' });
     }
 
     if (phone_number.length < 10) {
       return res.status(400).json({ error: 'Phone number must be at least 10 digits' });
     }
 
+    // Validation for address fields (required when creating customer)
+    if (!address_line || !city || !state || !pin_code) {
+      return res.status(400).json({ error: 'Address line, city, state, and pin code are required' });
+    }
+
+    // Create customer first
     const newCustomer = await Customer.createCustomer({
       first_name,
       last_name,
-      phone_number,
-      city,
-      state,
-      pin_code
+      phone_number
     });
+
+    // Create the first address for this customer
+    const addressData = { address_line, city, state, pin_code };
+    await Address.createAddress(newCustomer.id, addressData);
 
     res.status(201).json({ id: newCustomer.id, message: 'Customer created successfully' });
   } catch (error) {
