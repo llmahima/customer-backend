@@ -93,24 +93,36 @@ http://localhost:5001/api
 
 **Endpoint:** `GET /api/customers`
 
-**Query Parameters (Optional - for filtering):**
+**Query Parameters (Optional):**
 - `city` (string): Filter by city (partial match)
 - `state` (string): Filter by state (partial match)
 - `pin_code` (string): Filter by pin code (partial match)
+- `page` (integer): Page number (default: 1)
+- `limit` (integer): Items per page (default: 10)
 
 **Response:**
 ```json
-[
-  {
-    "id": 1,
-    "first_name": "John",
-    "last_name": "Doe",
-    "phone_number": "1234567890",
-    "city": "New York",
-    "state": "NY",
-    "pin_code": "10001"
+{
+  "customers": [
+    {
+      "id": 1,
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone_number": "1234567890",
+      "city": "New York",
+      "state": "NY",
+      "pin_code": "10001"
+    }
+  ],
+  "pagination": {
+    "currentPage": 1,
+    "totalPages": 5,
+    "totalCount": 50,
+    "limit": 10,
+    "hasNextPage": true,
+    "hasPrevPage": false
   }
-]
+}
 ```
 
 **Status Codes:**

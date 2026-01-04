@@ -1,7 +1,7 @@
 const Customer = require('../models/Customer');
 const Address = require('../models/Address');
 
-// Get all customers
+// Get all customers with pagination
 const getAllCustomers = async (req, res) => {
   try {
     const filters = {
@@ -10,8 +10,29 @@ const getAllCustomers = async (req, res) => {
       pin_code: req.query.pin_code
     };
     
-    const customers = await Customer.getAllCustomers(filters);
-    res.json(customers);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const pagination = { page, limit };
+    
+    // Get customers and total count
+    const [customers, totalCount] = await Promise.all([
+      Customer.getAllCustomers(filters, pagination),
+      Customer.getCustomerCount(filters)
+    ]);
+    
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    res.json({
+      customers,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCount,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

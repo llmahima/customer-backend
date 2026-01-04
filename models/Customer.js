@@ -1,9 +1,43 @@
 const db = require('../config/db');
 
-// Get all customers with optional filters
-const getAllCustomers = (filters = {}) => {
+// Get total count of customers with filters
+const getCustomerCount = (filters = {}) => {
   return new Promise((resolve, reject) => {
     const { city, state, pin_code } = filters;
+    let query = 'SELECT COUNT(*) as count FROM customers';
+    const params = [];
+
+    if (city || state || pin_code) {
+      const conditions = [];
+      if (city) {
+        conditions.push('city LIKE ?');
+        params.push(`%${city}%`);
+      }
+      if (state) {
+        conditions.push('state LIKE ?');
+        params.push(`%${state}%`);
+      }
+      if (pin_code) {
+        conditions.push('pin_code LIKE ?');
+        params.push(`%${pin_code}%`);
+      }
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+
+    db.get(query, params, (err, row) => {
+      if (err) reject(err);
+      else resolve(row.count);
+    });
+  });
+};
+
+// Get all customers with optional filters and pagination
+const getAllCustomers = (filters = {}, pagination = {}) => {
+  return new Promise((resolve, reject) => {
+    const { city, state, pin_code } = filters;
+    const { page = 1, limit = 10 } = pagination;
+    const offset = (page - 1) * limit;
+    
     let query = 'SELECT * FROM customers';
     const params = [];
 
@@ -23,6 +57,9 @@ const getAllCustomers = (filters = {}) => {
       }
       query += ' WHERE ' + conditions.join(' AND ');
     }
+
+    query += ' ORDER BY id DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
 
     db.all(query, params, (err, rows) => {
       if (err) reject(err);
@@ -85,6 +122,7 @@ const deleteCustomer = (id) => {
 
 module.exports = {
   getAllCustomers,
+  getCustomerCount,
   getCustomerById,
   createCustomer,
   updateCustomer,
