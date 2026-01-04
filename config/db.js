@@ -11,14 +11,22 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
+// Check if database file already exists
+const dbExists = fs.existsSync(dbPath);
+
 // Initialize database connection
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
   } else {
-    console.log('Connected to SQLite database');
+    if (dbExists) {
+      console.log('Connected to existing SQLite database (preserving existing data)');
+    } else {
+      console.log('Creating new SQLite database');
+    }
     
-    // Create customers table
+    // Always ensure tables exist (CREATE TABLE IF NOT EXISTS is safe for existing databases)
+    // This won't overwrite existing data, but ensures tables exist if database is empty
     db.run(`CREATE TABLE IF NOT EXISTS customers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       first_name TEXT NOT NULL,
@@ -26,7 +34,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
       phone_number TEXT NOT NULL
     )`);
 
-    // Create addresses table
     db.run(`CREATE TABLE IF NOT EXISTS addresses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       customer_id INTEGER NOT NULL,
